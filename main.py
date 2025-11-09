@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import time
 from loguru import logger
 
 from train.k_fold import KFoldCV
@@ -33,6 +34,8 @@ def main():
         "Accuracy": [0, 0, 0, 0],
         "Precision": [0, 0, 0, 0],
         "F1-Score": [0, 0, 0, 0],
+        "Train Time (s)": [0, 0, 0, 0],
+        "Test Time (s)": [0, 0, 0, 0],
     }
 
     folds = kfold.execute_method()
@@ -41,8 +44,14 @@ def main():
     for fold_idx, (x_train, x_test, y_train, y_test) in enumerate(folds, start=1):
         logger.info(f"[main] Fold {fold_idx} iniciado...")
 
+        # --- KNN ---
+        start_train = time.time()
         knn = KNN(k=3, x_train=x_train, y_train=y_train, task="C")
+        train_time = time.time() - start_train
+
+        start_test = time.time()
         y_pred_euclid, y_pred_manhattan = knn.predict(x_test=x_test)
+        test_time = time.time() - start_test
 
         conf_euc = metrics.confusion_matrix(y_pred_euclid, y_test, f"fold{fold_idx}_knn_euclidean", "Greens")
         conf_man = metrics.confusion_matrix(y_pred_manhattan, y_test, f"fold{fold_idx}_knn_manhattan", "Blues")
@@ -58,14 +67,23 @@ def main():
         results_summary["Accuracy"][0] += acc_euc
         results_summary["Precision"][0] += prec_euc
         results_summary["F1-Score"][0] += f1_euc
+        results_summary["Train Time (s)"][0] += train_time
+        results_summary["Test Time (s)"][0] += test_time
 
         results_summary["Accuracy"][1] += acc_man
         results_summary["Precision"][1] += prec_man
         results_summary["F1-Score"][1] += f1_man
+        results_summary["Train Time (s)"][1] += train_time
+        results_summary["Test Time (s)"][1] += test_time
 
         # --- Bayes Univariado ---
+        start_train = time.time()
         bayes_uni = BayesUnivariado(x_train=x_train, y_train=y_train)
+        train_time = time.time() - start_train
+
+        start_test = time.time()
         y_pred_uni = bayes_uni.predict(x_test=x_test)
+        test_time = time.time() - start_test
 
         conf_uni = metrics.confusion_matrix(y_pred_uni, y_test, f"fold{fold_idx}_bayes_uni", "Oranges")
         acc_uni = metrics.accuracy(conf_uni)
@@ -75,10 +93,17 @@ def main():
         results_summary["Accuracy"][2] += acc_uni
         results_summary["Precision"][2] += prec_uni
         results_summary["F1-Score"][2] += f1_uni
+        results_summary["Train Time (s)"][2] += train_time
+        results_summary["Test Time (s)"][2] += test_time
 
         # --- Bayes Multivariado ---
+        start_train = time.time()
         bayes_multi = BayesMultivariado(x_train=x_train, y_train=y_train)
+        train_time = time.time() - start_train
+
+        start_test = time.time()
         y_pred_multi = bayes_multi.predict(x_test=x_test)
+        test_time = time.time() - start_test
 
         conf_multi = metrics.confusion_matrix(y_pred_multi, y_test, f"fold{fold_idx}_bayes_multi", "Purples")
         acc_multi = metrics.accuracy(conf_multi)
@@ -88,18 +113,23 @@ def main():
         results_summary["Accuracy"][3] += acc_multi
         results_summary["Precision"][3] += prec_multi
         results_summary["F1-Score"][3] += f1_multi
+        results_summary["Train Time (s)"][3] += train_time
+        results_summary["Test Time (s)"][3] += test_time
 
         logger.info(f"[main] Fold {fold_idx} concluído.")
 
+    # --- Calcula médias finais ---
     num_folds = len(folds)
     for i in range(len(results_summary["Model"])):
         results_summary["Accuracy"][i] /= num_folds
         results_summary["Precision"][i] /= num_folds
         results_summary["F1-Score"][i] /= num_folds
+        results_summary["Train Time (s)"][i] /= num_folds
+        results_summary["Test Time (s)"][i] /= num_folds
 
     df_metrics = pd.DataFrame(results_summary)
-    print("\nMédias das Métricas (10-Fold Cross-Validation):\n")
-    print(df_metrics)
+    print("\nMédias das Métricas e Tempos (10-Fold Cross-Validation):\n")
+    print(df_metrics.round(4))
 
 
 if __name__ == "__main__":
