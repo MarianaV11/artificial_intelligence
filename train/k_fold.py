@@ -12,15 +12,12 @@ class KFoldCV:
         np.random.seed(self.random_state)
         number_of_samples = len(self.x)
 
-        # Embaralha os índices
         indices = np.random.permutation(number_of_samples)
         logger.info(f"[KFoldCV] Random indices: {indices}")
 
-        # Divide os índices em n_splits partes (folds)
         folds = np.array_split(indices, self.n_splits)
         logger.info(f"[KFoldCV] Fold sizes: {[len(f) for f in folds]}")
 
-        # Gera os conjuntos de treino e teste para cada fold
         results = []
         for i in range(self.n_splits):
             test_indices = folds[i]

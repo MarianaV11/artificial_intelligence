@@ -1,24 +1,23 @@
+import time
+
 import numpy as np
 import pandas as pd
-import time
 from loguru import logger
+from scipy.io import arff
 
+from train.bayes_multivariado import BayesMultivariado
+from train.bayes_univariado import BayesUnivariado
+from train.perceptron import Perceptron
+from train.mlp import MLP
 from train.k_fold import KFoldCV
 from train.knn import KNN
 from train.metrics_graph import Metrics
-from train.bayes_univariado import BayesUnivariado
-from train.bayes_multivariado import BayesMultivariado
 
 
 def read_data():
-    logger.info("[read_data] Reading txt")
+    data, meta = arff.loadarff("data/dataset_28.arff")
 
-    try:
-        data = np.loadtxt("data/data_banknote_authentication.txt", delimiter=",")
-        logger.info(f"[read_data] Data shape (lines and columns): {data.shape}")
-        return data
-    except Exception as e:
-        logger.error(f"[read_data] ERROR: {e}")
+    return np.array(data.tolist(), dtype=float)
 
 
 def main():
@@ -30,12 +29,12 @@ def main():
     metrics = Metrics()
 
     results_summary = {
-        "Model": ["KNN - Euclidean", "KNN - Manhattan", "Bayes - Univariado", "Bayes - Multivariado"],
-        "Accuracy": [0, 0, 0, 0],
-        "Precision": [0, 0, 0, 0],
-        "F1-Score": [0, 0, 0, 0],
-        "Train Time (s)": [0, 0, 0, 0],
-        "Test Time (s)": [0, 0, 0, 0],
+        "Model": ["KNN - Euclidean", "KNN - Manhattan", "Bayes - Univariado", "Bayes - Multivariado", "Perceptron", "MLP"],
+        "Accuracy": [0, 0, 0, 0, 0, 0],
+        "Precision": [0, 0, 0, 0, 0, 0],
+        "F1-Score": [0, 0, 0, 0, 0, 0],
+        "Train Time (s)": [0, 0, 0, 0, 0, 0],
+        "Test Time (s)": [0, 0, 0, 0, 0, 0],
     }
 
     folds = kfold.execute_method()
@@ -115,6 +114,48 @@ def main():
         results_summary["F1-Score"][3] += f1_multi
         results_summary["Train Time (s)"][3] += train_time
         results_summary["Test Time (s)"][3] += test_time
+
+        # --- Perceptron ---
+        start_train = time.time()
+        perceptron = Perceptron(x=x_train, y=y_train)
+        train_time = time.time() - start_train
+
+        start_test = time.time()
+        y_perceptron = perceptron.predict(x_test=x_test)
+        test_time = time.time() - start_test
+
+        conf_perceptron = metrics.confusion_matrix(y_perceptron, y_test, f"fold{fold_idx}_bayes_multi", "Purples")
+        acc_perceptron = metrics.accuracy(conf_perceptron)
+        prec_perceptron = metrics.precision(conf_perceptron)
+        f1_perceptron = metrics.f1_score(conf_perceptron)
+
+        results_summary["Accuracy"][4] += acc_perceptron
+        results_summary["Precision"][4] += prec_perceptron
+        results_summary["F1-Score"][4] += f1_perceptron
+        results_summary["Train Time (s)"][4] += train_time
+        results_summary["Test Time (s)"][4] += test_time
+
+        logger.info(f"[main] Fold {fold_idx} concluído.")
+
+        # --- MLP ---
+        start_train = time.time()
+        mlp = MLP(input_dim=x_test.shape[1])
+        train_time = time.time() - start_train
+
+        start_test = time.time()
+        y_mlp = mlp.predict(X=x_test)
+        test_time = time.time() - start_test
+
+        conf_mlp = metrics.confusion_matrix(y_mlp, y_test, f"fold{fold_idx}_bayes_multi", "Purples")
+        acc_mlp = metrics.accuracy(conf_mlp)
+        prec_mlp = metrics.precision(conf_mlp)
+        f1_mlp = metrics.f1_score(conf_mlp)
+
+        results_summary["Accuracy"][5] += acc_mlp
+        results_summary["Precision"][5] += prec_mlp
+        results_summary["F1-Score"][5] += f1_mlp
+        results_summary["Train Time (s)"][5] += train_time
+        results_summary["Test Time (s)"][5] += test_time
 
         logger.info(f"[main] Fold {fold_idx} concluído.")
 

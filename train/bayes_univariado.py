@@ -5,13 +5,6 @@ import math
 
 class BayesUnivariado:
     def __init__(self, x_train: np.ndarray, y_train: np.ndarray):
-        """
-        Implementação do Classificador Bayesiano Univariado.
-        Cada atributo é tratado como uma distribuição normal independente.
-
-        :param x_train: matriz de treino (amostras x atributos)
-        :param y_train: vetor de rótulos de treino
-        """
         self.x_train = x_train
         self.y_train = y_train
         self.classes = np.unique(y_train)
@@ -25,9 +18,6 @@ class BayesUnivariado:
         self._fit()
 
     def _fit(self):
-        """
-        Calcula média, desvio padrão e probabilidade a priori (P(classe)).
-        """
         for c in self.classes:
             x_class = self.x_train[self.y_train == c]
             self.mean[c] = np.mean(x_class, axis=0)
@@ -37,18 +27,11 @@ class BayesUnivariado:
         logger.info("[BayesUnivariado] Treinamento concluído.")
 
     def _gaussian_pdf(self, x, mean, std):
-        """
-        Calcula a densidade da normal univariada:
-        p(x) = (1 / sqrt(2πσ²)) * exp(-0.5 * ((x - μ)/σ)²)
-        """
         eps = 1e-9  # evitar divisão por zero
         exponent = np.exp(-((x - mean) ** 2) / (2 * (std + eps) ** 2))
         return (1 / (np.sqrt(2 * math.pi) * (std + eps))) * exponent
 
     def predict(self, x_test: np.ndarray):
-        """
-        Prediz as classes do conjunto de teste com base nas probabilidades máximas.
-        """
         logger.info("[BayesUnivariado] Iniciando predição...")
         y_pred = []
 
